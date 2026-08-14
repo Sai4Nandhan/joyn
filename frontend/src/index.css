@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-ink-200 dark:border-purple-950/20;
+  }
+  html {
+    @apply scroll-smooth;
+  }
+  body {
+    @apply antialiased bg-ink-50 text-ink-800 font-body dark:bg-[#090A1A] dark:text-slate-100 transition-colors duration-200;
+  }
+  h1, h2, h3 {
+    @apply font-display font-semibold;
+  }
+  :focus-visible {
+    outline: none;
+  }
+  input:focus, textarea:focus, select:focus, button:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
+
+@layer components {
+  /* Sidebar nav item */
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-ink-500 transition-all duration-200 cursor-pointer;
+  }
+  .nav-item:hover {
+    @apply bg-brand-50/60 text-brand-600;
+  }
+  .nav-item.active {
+    @apply bg-gradient-to-r from-[#7c3aed] to-[#db2777] text-white shadow-md shadow-brand-500/10 font-semibold;
+  }
+
+  /* Category pill */
+  .category-pill {
+    @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-ink-200 bg-white text-ink-600 cursor-pointer transition-all duration-200 whitespace-nowrap;
+  }
+  .category-pill:hover {
+    @apply border-brand-200 text-brand-600 bg-brand-50/50;
+  }
+  .category-pill.active {
+    @apply bg-gradient-to-r from-[#7c3aed] to-[#ea580c] text-white border-0 shadow-md shadow-brand-500/10 font-semibold;
+  }
+
+  /* Category badge */
+  .badge-sports {
+    @apply bg-emerald-500 text-white;
+  }
+  .badge-trips {
+    @apply bg-orange-500 text-white;
+  }
+  .badge-social {
+    @apply bg-violet-600 text-white;
+  }
+  .badge-travel {
+    @apply bg-blue-500 text-white;
+  }
+  .badge-trekking {
+    @apply bg-amber-600 text-white;
+  }
+  .badge-default {
+    @apply bg-ink-400 text-white;
+  }
+
+  /* Trust score colors */
+  .trust-excellent {
+    @apply text-trust-high;
+  }
+  .trust-good {
+    @apply text-trust-medium;
+  }
+  .trust-low {
+    @apply text-trust-low;
+  }
+
+  /* JOYN Premium Gradients */
+  .bg-joyn-gradient {
+    background: linear-gradient(135deg, #7c3aed 0%, #db2777 50%, #ea580c 100%);
+  }
+  
+  .bg-joyn-hero-gradient {
+    background: radial-gradient(circle at top right, #3b0764 0%, #0f051d 60%, #030008 100%);
+  }
+
+  .text-joyn-gradient {
+    background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .bg-joyn-card-dark {
+    background-color: rgba(15, 6, 28, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(124, 58, 237, 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
