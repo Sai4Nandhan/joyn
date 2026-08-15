@@ -30,4 +30,19 @@ export const env = {
     pass: process.env.SMTP_PASS,
     from: process.env.SMTP_FROM,
   },
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY,
+    apiSecret: process.env.CLOUDINARY_API_SECRET,
+    url: process.env.CLOUDINARY_URL,
+  },
 };
+
+export function isCloudinaryConfigured() {
+  return Boolean(
+    env.cloudinary.url ||
+    (env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret)
+  );
+}
+
+

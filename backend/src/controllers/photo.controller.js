@@ -5,13 +5,15 @@ import { User } from '../models/User.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { isCloudinaryConfigured } from '../config/env.js';
+import { uploadToCloudinary, deleteFromCloudinary } from '../config/cloudinary.js';
 
 export const uploadPhoto = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) throw new ApiError(404, 'User not found');
 
   if (user.profilePhotos && user.profilePhotos.length >= 5) {
-    if (req.file) {
+    if (req.file && fs.existsSync(req.file.path)) {
       fs.unlink(req.file.path, () => {});
     }
     throw new ApiError(400, 'Maximum 5 profile photos allowed. Please delete a photo first.');
@@ -21,14 +23,35 @@ export const uploadPhoto = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'No photo uploaded');
   }
 
-  const photoUrl = `/uploads/profiles/${req.file.filename}`;
+  let finalPhotoUrl = '';
+  let finalPublicId = req.file.filename;
+
+  try {
+    if (isCloudinaryConfigured()) {
+      const cloudinaryResult = await uploadToCloudinary(req.file.path, 'joyn/profiles');
+      finalPhotoUrl = cloudinaryResult.secure_url;
+      finalPublicId = cloudinaryResult.public_id;
+    } else {
+      // Fallback for local development when Cloudinary environment variables are not set
+      finalPhotoUrl = `/uploads/profiles/${req.file.filename}`;
+    }
+  } catch (err) {
+    console.error('Profile photo storage upload error:', err);
+    throw new ApiError(500, `Failed to upload image to cloud storage: ${err.message}`);
+  } finally {
+    // Always clean up local temporary upload file
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlink(req.file.path, () => {});
+    }
+  }
+
   const photoId = crypto.randomBytes(8).toString('hex');
   const isFirst = !user.profilePhotos || user.profilePhotos.length === 0;
 
   const newPhoto = {
     id: photoId,
-    url: photoUrl,
-    publicId: req.file.filename,
+    url: finalPhotoUrl,
+    publicId: finalPublicId,
     isPrimary: isFirst,
     order: user.profilePhotos ? user.profilePhotos.length : 0,
     createdAt: new Date(),
@@ -38,7 +61,7 @@ export const uploadPhoto = asyncHandler(async (req, res) => {
   user.profilePhotos.push(newPhoto);
 
   if (isFirst) {
-    user.avatarUrl = photoUrl;
+    user.avatarUrl = finalPhotoUrl;
   }
 
   await user.save();
@@ -57,11 +80,15 @@ export const deletePhoto = asyncHandler(async (req, res) => {
 
   const [deletedPhoto] = user.profilePhotos.splice(photoIndex, 1);
 
-  // Attempt local disk deletion if it's a local upload
-  if (deletedPhoto.url.startsWith('/uploads/profiles/')) {
+  // Attempt Cloudinary deletion if publicId exists, otherwise attempt legacy local disk cleanup
+  if (deletedPhoto.publicId && !deletedPhoto.url.startsWith('/uploads/')) {
+    await deleteFromCloudinary(deletedPhoto.publicId);
+  } else if (deletedPhoto.url && deletedPhoto.url.startsWith('/uploads/profiles/')) {
     const filename = path.basename(deletedPhoto.url);
     const filePath = path.join(process.cwd(), 'uploads', 'profiles', filename);
-    fs.unlink(filePath, () => {});
+    if (fs.existsSync(filePath)) {
+      fs.unlink(filePath, () => {});
+    }
   }
 
   // If deleted photo was primary and remaining photos exist, promote first remaining photo to primary
@@ -80,6 +107,7 @@ export const deletePhoto = asyncHandler(async (req, res) => {
   await user.save();
   return ApiResponse(res, 200, { user: user.toSafeJSON() }, 'Photo deleted successfully');
 });
+
 
 export const setPrimaryPhoto = asyncHandler(async (req, res) => {
   const { photoId } = req.params;

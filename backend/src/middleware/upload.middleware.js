@@ -3,21 +3,19 @@ import path from 'path';
 import fs from 'fs';
 import { ApiError } from '../utils/ApiError.js';
 
-// Ensure upload directories exist
-const profilesDir = path.join(process.cwd(), 'uploads', 'profiles');
+import os from 'os';
+
+// Ensure upload directories exist for verification docs
 const verificationsDir = path.join(process.cwd(), 'uploads', 'verifications');
 
-if (!fs.existsSync(profilesDir)) {
-  fs.mkdirSync(profilesDir, { recursive: true });
-}
 if (!fs.existsSync(verificationsDir)) {
   fs.mkdirSync(verificationsDir, { recursive: true });
 }
 
-// Storage for profile photos
+// Temporary disk storage for profile photos (uploaded to Cloudinary in controller)
 const profileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, profilesDir);
+    cb(null, os.tmpdir());
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -25,6 +23,7 @@ const profileStorage = multer.diskStorage({
     cb(null, `profile-${req.user._id}-${uniqueSuffix}${ext}`);
   },
 });
+
 
 // Storage for verification selfies/docs
 const verificationStorage = multer.diskStorage({
