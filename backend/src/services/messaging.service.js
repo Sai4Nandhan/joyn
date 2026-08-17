@@ -14,6 +14,14 @@ try {
   // Ignore
 }
 
+function customLookup(hostname, options, callback) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+  return dns.lookup(hostname, { ...options, family: 4 }, callback);
+}
+
 /**
  * Sends a real Email OTP verification code to the recipient's inbox via SMTP or Ethereal test inbox.
  */
@@ -32,6 +40,7 @@ function getTransporter(forcedPort = null, forcedSecure = null) {
       secure: isSecure,
       requireTLS: !isSecure,
       family: 4,
+      lookup: customLookup,
       connectionTimeout: 10000,
       greetingTimeout: 10000,
       socketTimeout: 15000,
