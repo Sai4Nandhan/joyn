@@ -22,121 +22,84 @@ function customLookup(hostname, options, callback) {
   return dns.lookup(hostname, { ...options, family: 4 }, callback);
 }
 
-/**
- * Sends a real Email OTP verification code to the recipient's inbox via SMTP or Ethereal test inbox.
- */
-function getTransporter(forcedPort = null, forcedSecure = null) {
-  const { host, port, user, pass } = env.smtp;
-
-  if (host && user && pass) {
-    // Render free tier blocks outbound port 587. For Gmail SMTP, port 465 SMTPS is supported and open.
-    const isGmail = host.includes('gmail');
-    const effectivePort = forcedPort ? Number(forcedPort) : (isGmail ? 465 : Number(port || 587));
-    const isSecure = forcedSecure !== null ? forcedSecure : effectivePort === 465;
-
-    return nodemailer.createTransport({
-      host,
-      port: effectivePort,
-      secure: isSecure,
-      requireTLS: !isSecure,
-      family: 4,
-      lookup: customLookup,
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-      pool: false,
-      tls: {
-        rejectUnauthorized: false,
-      },
-      auth: { user, pass },
-    });
-  }
-  return null;
-}
-
 export async function sendEmailOtp(emailAddress, otpCode) {
   const isDev = env.nodeEnv === 'development';
   const smtpUser = env.smtp.user;
+  const smtpPass = env.smtp.pass;
+  const smtpHost = env.smtp.host || 'smtp.gmail.com';
   const smtpFrom = env.smtp.from || (smtpUser ? `"JOYN Platform" <${smtpUser}>` : '"JOYN Platform" <no-reply@joynapp.com>');
 
-  let transporter = getTransporter();
-
-  if (!transporter) {
+  if (!smtpUser || !smtpPass) {
     if (isDev) {
-      // Real Transactional Email Testing via Nodemailer Ethereal ONLY in local development
       try {
         const testAccount = await nodemailer.createTestAccount();
-        transporter = nodemailer.createTransport({
+        const transporter = nodemailer.createTransport({
           host: 'smtp.ethereal.email',
           port: 587,
           secure: false,
-          auth: {
-            user: testAccount.user,
-            pass: testAccount.pass,
-          },
+          auth: { user: testAccount.user, pass: testAccount.pass },
         });
-        console.log(`[EMAIL DISPATCH] Initialized free Ethereal SMTP test transporter (${testAccount.user})`);
+        console.log(`[EMAIL DISPATCH] Initialized Ethereal test transporter (${testAccount.user})`);
+        const info = await transporter.sendMail({
+          from: smtpFrom,
+          to: emailAddress,
+          subject: `JOYN — Your 6-Digit Verification Code`,
+          html: `<p>Your code is <b>${otpCode}</b></p>`,
+        });
+        console.log(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
+        return true;
       } catch (e) {
-        console.error('Failed to create Ethereal test account:', e.message);
+        console.error('Failed Ethereal test account:', e.message);
       }
-    } else {
-      // Staging / Production without SMTP configured
-      throw new ApiError(500, 'SMTP Email credentials not configured on backend server. Add SMTP_HOST, SMTP_USER, SMTP_PASS to backend/.env to send live Email.');
     }
+    throw new ApiError(500, 'SMTP Email credentials not configured on backend server. Add SMTP_HOST, SMTP_USER, SMTP_PASS to backend/.env to send live Email.');
   }
 
-  if (transporter) {
-    const mailOptions = {
-      from: smtpFrom,
-      to: emailAddress,
-      subject: `JOYN — Your 6-Digit Verification Code`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 16px;">
-          <h2 style="color: #7c3aed; margin-bottom: 10px;">JOYN Verification Code</h2>
-          <p style="color: #475569; font-size: 14px;">Your 6-digit verification code to complete your registration is:</p>
-          <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #0f172a; margin: 20px 0; border-radius: 8px;">
-            ${otpCode}
-          </div>
-          <p style="color: #64748b; font-size: 12px;">This code is valid for 10 minutes. If you did not request this code, please ignore this email.</p>
+  const mailOptions = {
+    from: smtpFrom,
+    to: emailAddress,
+    subject: `JOYN — Your 6-Digit Verification Code`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 16px;">
+        <h2 style="color: #7c3aed; margin-bottom: 10px;">JOYN Verification Code</h2>
+        <p style="color: #475569; font-size: 14px;">Your 6-digit verification code to complete your registration is:</p>
+        <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #0f172a; margin: 20px 0; border-radius: 8px;">
+          ${otpCode}
         </div>
-      `,
-    };
+        <p style="color: #64748b; font-size: 12px;">This code is valid for 10 minutes. If you did not request this code, please ignore this email.</p>
+      </div>
+    `,
+  };
 
+  // Try Gmail service connector first, then SMTPS (465), then STARTTLS (587)
+  const transportConfigs = [
+    { service: 'gmail', auth: { user: smtpUser, pass: smtpPass } },
+    { host: smtpHost, port: 465, secure: true, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false } },
+    { host: smtpHost, port: 587, secure: false, requireTLS: true, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false } },
+  ];
+
+  let lastErr = null;
+  for (const config of transportConfigs) {
     try {
+      const transporter = nodemailer.createTransport({
+        ...config,
+        family: 4,
+        connectionTimeout: 8000,
+        greetingTimeout: 8000,
+        socketTimeout: 10000,
+      });
+
       const info = await transporter.sendMail(mailOptions);
       console.log(`[EMAIL DISPATCH SUCCESS] Delivered OTP email to ${emailAddress} (MsgID: ${info.messageId})`);
-
-      if (isDev) {
-        const previewUrl = nodemailer.getTestMessageUrl(info);
-        if (previewUrl) {
-          console.log(`\n==================================================`);
-          console.log(`📬 [DEV ONLY - ETHEREAL INBOX PREVIEW]`);
-          console.log(`  To: ${emailAddress}`);
-          console.log(`  Preview URL: ${previewUrl}`);
-          console.log(`==================================================\n`);
-        }
-      }
-
       return true;
     } catch (err) {
-      console.warn(`⚠️ [PRIMARY EMAIL DISPATCH FAILED] ${err.message}. Attempting SMTPS port 465 fallback...`);
-      // Try fallback SMTPS on port 465 if configured with credentials
-      const fallbackTransporter = getTransporter(465, true);
-      if (fallbackTransporter) {
-        try {
-          const fbInfo = await fallbackTransporter.sendMail(mailOptions);
-          console.log(`[EMAIL DISPATCH SUCCESS VIA FALLBACK 465] Delivered OTP email to ${emailAddress} (MsgID: ${fbInfo.messageId})`);
-          return true;
-        } catch (fbErr) {
-          console.error(`❌ [FALLBACK EMAIL DISPATCH ERROR]:`, fbErr.message);
-        }
-      }
-      console.error(`❌ [EMAIL DISPATCH ERROR] Failed to deliver email to ${emailAddress}:`, err.message);
-      throw new ApiError(500, `Email delivery failed: ${err.message}`);
+      console.warn(`[EMAIL DISPATCH METHOD FAILED (${config.service || config.port})]:`, err.message);
+      lastErr = err;
     }
   }
 
-  throw new ApiError(535, 'Email verification service is currently unavailable.');
+  console.error(`❌ [EMAIL DISPATCH ERROR] All SMTP transport methods failed for ${emailAddress}:`, lastErr?.message);
+  throw new ApiError(500, `Email delivery failed: ${lastErr?.message || 'SMTP connection timeout'}`);
 }
 
 /**
