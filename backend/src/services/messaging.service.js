@@ -21,7 +21,9 @@ function getTransporter(forcedPort = null, forcedSecure = null) {
   const { host, port, user, pass } = env.smtp;
 
   if (host && user && pass) {
-    const effectivePort = Number(forcedPort || port) || 587;
+    // Render free tier blocks outbound port 587. For Gmail SMTP, port 465 SMTPS is supported and open.
+    const isGmail = host.includes('gmail');
+    const effectivePort = forcedPort ? Number(forcedPort) : (isGmail ? 465 : Number(port || 587));
     const isSecure = forcedSecure !== null ? forcedSecure : effectivePort === 465;
 
     return nodemailer.createTransport({
@@ -30,9 +32,9 @@ function getTransporter(forcedPort = null, forcedSecure = null) {
       secure: isSecure,
       requireTLS: !isSecure,
       family: 4,
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 20000,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
       pool: false,
       auth: { user, pass },
     });
