@@ -70,7 +70,7 @@ export async function register({ name, email, phone, verificationMethod = 'email
   }
 
   // Verify OTP code
-  await verifyOtp({ method, email, phone, otp, purpose: method === 'email' ? 'EMAIL_VERIFICATION' : 'PHONE_VERIFICATION' });
+  await verifyOtp({ method, email: target, phone: target, target, otp, purpose: method === 'email' ? 'EMAIL_VERIFICATION' : 'PHONE_VERIFICATION' });
 
   const passwordHash = await User.hashPassword(password);
   const user = await User.create({

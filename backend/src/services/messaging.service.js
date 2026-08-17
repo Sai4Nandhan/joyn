@@ -1,41 +1,33 @@
 import nodemailer from 'nodemailer';
 import https from 'https';
 import { ApiError } from '../utils/ApiError.js';
+import { env } from '../config/env.js';
 import { sendWhatsAppOtp } from './whatsapp.service.js';
 
 /**
  * Sends a real Email OTP verification code to the recipient's inbox via SMTP or Ethereal test inbox.
  */
-let sharedTransporter = null;
-
 function getTransporter() {
-  const isDev = process.env.NODE_ENV === 'development';
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = Number(process.env.SMTP_PORT) || 587;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
+  const { host, port, user, pass } = env.smtp;
 
-  if (smtpHost && smtpUser && smtpPass) {
-    if (!sharedTransporter) {
-      sharedTransporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        family: 4,
-        pool: true,
-        maxConnections: 5,
-        auth: { user: smtpUser, pass: smtpPass },
-      });
-    }
-    return sharedTransporter;
+  if (host && user && pass) {
+    return nodemailer.createTransport({
+      host,
+      port: Number(port) || 587,
+      secure: Number(port) === 465,
+      requireTLS: Number(port) !== 465,
+      family: 4,
+      pool: false,
+      auth: { user, pass },
+    });
   }
   return null;
 }
 
 export async function sendEmailOtp(emailAddress, otpCode) {
-  const isDev = process.env.NODE_ENV === 'development';
-  const smtpUser = process.env.SMTP_USER;
-  const smtpFrom = process.env.SMTP_FROM || `"JOYN Platform" <${smtpUser || 'no-reply@joynapp.com'}>`;
+  const isDev = env.nodeEnv === 'development';
+  const smtpUser = env.smtp.user;
+  const smtpFrom = env.smtp.from || (smtpUser ? `"JOYN Platform" <${smtpUser}>` : '"JOYN Platform" <no-reply@joynapp.com>');
 
   let transporter = getTransporter();
 
