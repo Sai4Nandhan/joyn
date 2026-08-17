@@ -72,11 +72,22 @@ export async function sendEmailOtp(emailAddress, otpCode) {
     `,
   };
 
-  // Try Gmail service connector first, then SMTPS (465), then STARTTLS (587)
+  // Resolve IPv4 address for SMTP host to guarantee IPv4 connection on cloud hosts
+  let resolvedIps = [];
+  try {
+    resolvedIps = await dns.promises.resolve4(smtpHost);
+  } catch (dnsErr) {
+    console.warn(`[DNS RESOLVE WARNING] Could not resolve IPv4 for ${smtpHost}:`, dnsErr.message);
+  }
+  const ipv4Host = resolvedIps.length > 0 ? resolvedIps[0] : smtpHost;
+
   const transportConfigs = [
-    { service: 'gmail', auth: { user: smtpUser, pass: smtpPass } },
-    { host: smtpHost, port: 465, secure: true, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false } },
-    { host: smtpHost, port: 587, secure: false, requireTLS: true, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false } },
+    // 1. Direct IPv4 address SMTPS (Port 465)
+    { host: ipv4Host, port: 465, secure: true, auth: { user: smtpUser, pass: smtpPass }, tls: { servername: smtpHost, rejectUnauthorized: false } },
+    // 2. Direct IPv4 address STARTTLS (Port 587)
+    { host: ipv4Host, port: 587, secure: false, requireTLS: true, auth: { user: smtpUser, pass: smtpPass }, tls: { servername: smtpHost, rejectUnauthorized: false } },
+    // 3. Domain host fallback with customLookup family 4
+    { host: smtpHost, port: 465, secure: true, lookup: customLookup, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false } },
   ];
 
   let lastErr = null;
@@ -85,17 +96,16 @@ export async function sendEmailOtp(emailAddress, otpCode) {
       const transporter = nodemailer.createTransport({
         ...config,
         family: 4,
-        lookup: customLookup,
         connectionTimeout: 8000,
         greetingTimeout: 8000,
         socketTimeout: 10000,
       });
 
       const info = await transporter.sendMail(mailOptions);
-      console.log(`[EMAIL DISPATCH SUCCESS] Delivered OTP email to ${emailAddress} (MsgID: ${info.messageId})`);
+      console.log(`[EMAIL DISPATCH SUCCESS] Delivered OTP email to ${emailAddress} via ${config.host}:${config.port} (MsgID: ${info.messageId})`);
       return true;
     } catch (err) {
-      console.warn(`[EMAIL DISPATCH METHOD FAILED (${config.service || config.port})]:`, err.message);
+      console.warn(`[EMAIL DISPATCH METHOD FAILED (${config.host}:${config.port})]:`, err.message);
       lastErr = err;
     }
   }
