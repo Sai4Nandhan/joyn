@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import https from 'https';
 import dns from 'dns';
+import { Resend } from 'resend';
 import { ApiError } from '../utils/ApiError.js';
 import { env } from '../config/env.js';
 import { sendWhatsAppOtp } from './whatsapp.service.js';
@@ -24,6 +25,45 @@ function customLookup(hostname, options, callback) {
 
 export async function sendEmailOtp(emailAddress, otpCode) {
   const isDev = env.nodeEnv === 'development';
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 16px;">
+      <h2 style="color: #7c3aed; margin-bottom: 10px;">JOYN Verification Code</h2>
+      <p style="color: #475569; font-size: 14px;">Your 6-digit verification code to complete your registration is:</p>
+      <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #0f172a; margin: 20px 0; border-radius: 8px;">
+        ${otpCode}
+      </div>
+      <p style="color: #64748b; font-size: 12px;">This code is valid for 10 minutes. If you did not request this code, please ignore this email.</p>
+    </div>
+  `;
+
+  // 1. PRIMARY PRODUCTION DISPATCH: Resend HTTPS REST API (Port 443 - Never blocked by Render firewall)
+  if (env.resend.apiKey) {
+    try {
+      const resend = new Resend(env.resend.apiKey);
+      const fromAddress = env.resend.from || 'JOYN Verification <onboarding@resend.dev>';
+      
+      const { data, error } = await resend.emails.send({
+        from: fromAddress,
+        to: emailAddress,
+        subject: `JOYN — Your 6-Digit Verification Code`,
+        html: htmlBody,
+      });
+
+      if (error) {
+        console.error(`❌ [RESEND API DISPATCH ERROR] Email delivery failed for ${emailAddress}:`, error.message || error);
+        throw new ApiError(500, `Email delivery failed: ${error.message || 'Resend API error'}`);
+      }
+
+      console.log(`[RESEND API DISPATCH SUCCESS] Delivered OTP email to ${emailAddress} (Resend ID: ${data?.id})`);
+      return true;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      console.error(`❌ [RESEND EXCEPTION] Error delivering email to ${emailAddress}:`, err.message);
+      throw new ApiError(500, `Email delivery failed: ${err.message}`);
+    }
+  }
+
+  // 2. LOCAL DEVELOPMENT FALLBACK: Direct Nodemailer SMTP / Ethereal Testing
   const smtpUser = env.smtp.user;
   const smtpPass = env.smtp.pass;
   const smtpHost = env.smtp.host || 'smtp.gmail.com';
@@ -53,68 +93,35 @@ export async function sendEmailOtp(emailAddress, otpCode) {
         console.error('Failed Ethereal test account:', e.message);
       }
     }
-    throw new ApiError(500, 'SMTP Email credentials not configured on backend server. Add SMTP_HOST, SMTP_USER, SMTP_PASS to backend/.env to send live Email.');
+    throw new ApiError(500, 'SMTP / Resend Email credentials not configured on backend server. Set RESEND_API_KEY or SMTP_USER / SMTP_PASS in backend/.env.');
   }
 
   const mailOptions = {
     from: smtpFrom,
     to: emailAddress,
     subject: `JOYN — Your 6-Digit Verification Code`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 16px;">
-        <h2 style="color: #7c3aed; margin-bottom: 10px;">JOYN Verification Code</h2>
-        <p style="color: #475569; font-size: 14px;">Your 6-digit verification code to complete your registration is:</p>
-        <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #0f172a; margin: 20px 0; border-radius: 8px;">
-          ${otpCode}
-        </div>
-        <p style="color: #64748b; font-size: 12px;">This code is valid for 10 minutes. If you did not request this code, please ignore this email.</p>
-      </div>
-    `,
+    html: htmlBody,
   };
 
-  // Resolve IPv4 addresses for SMTP host to guarantee IPv4 connection on cloud hosts
-  let resolvedIps = [];
+  // Direct Nodemailer transport for local testing
   try {
-    const res = await dns.promises.lookup(smtpHost, { family: 4, all: true });
-    resolvedIps = res.map((r) => r.address);
-  } catch (dnsErr) {
-    console.warn(`[DNS LOOKUP WARNING] Could not resolve IPv4 for ${smtpHost}:`, dnsErr.message);
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: Number(env.smtp.port || 465),
+      secure: Number(env.smtp.port || 465) === 465,
+      family: 4,
+      lookup: customLookup,
+      auth: { user: smtpUser, pass: smtpPass },
+      tls: { rejectUnauthorized: false }
+    });
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[LOCAL SMTP DISPATCH SUCCESS] Delivered OTP email to ${emailAddress} (MsgID: ${info.messageId})`);
+    return true;
+  } catch (err) {
+    console.error(`❌ [LOCAL SMTP DISPATCH ERROR] Failed to deliver email to ${emailAddress}:`, err.message);
+    throw new ApiError(500, `Email delivery failed: ${err.message}`);
   }
-
-  // Known Gmail IPv4 SMTPS endpoints as fallbacks for cloud hosts like Render
-  const fallbackIps = ['142.250.115.108', '172.217.212.108', '74.125.130.108'];
-  const targetIps = Array.from(new Set([...resolvedIps, ...fallbackIps]));
-
-  const transportConfigs = targetIps.map((ip) => ({
-    host: ip,
-    port: 465,
-    secure: true,
-    auth: { user: smtpUser, pass: smtpPass },
-    tls: { servername: smtpHost, rejectUnauthorized: false },
-  }));
-
-  let lastErr = null;
-  for (const config of transportConfigs) {
-    try {
-      const transporter = nodemailer.createTransport({
-        ...config,
-        family: 4,
-        connectionTimeout: 8000,
-        greetingTimeout: 8000,
-        socketTimeout: 10000,
-      });
-
-      const info = await transporter.sendMail(mailOptions);
-      console.log(`[EMAIL DISPATCH SUCCESS] Delivered OTP email to ${emailAddress} via ${config.host}:${config.port} (MsgID: ${info.messageId})`);
-      return true;
-    } catch (err) {
-      console.warn(`[EMAIL DISPATCH METHOD FAILED (${config.host}:${config.port})]:`, err.message);
-      lastErr = err;
-    }
-  }
-
-  console.error(`❌ [EMAIL DISPATCH ERROR] All SMTP transport methods failed for ${emailAddress}:`, lastErr?.message);
-  throw new ApiError(500, `Email delivery failed: ${lastErr?.message || 'SMTP connection timeout'}`);
 }
 
 /**
