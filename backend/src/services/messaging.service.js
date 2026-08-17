@@ -37,6 +37,7 @@ export async function sendEmailOtp(emailAddress, otpCode) {
           host: 'smtp.ethereal.email',
           port: 587,
           secure: false,
+          lookup: customLookup,
           auth: { user: testAccount.user, pass: testAccount.pass },
         });
         console.log(`[EMAIL DISPATCH] Initialized Ethereal test transporter (${testAccount.user})`);
@@ -84,6 +85,7 @@ export async function sendEmailOtp(emailAddress, otpCode) {
       const transporter = nodemailer.createTransport({
         ...config,
         family: 4,
+        lookup: customLookup,
         connectionTimeout: 8000,
         greetingTimeout: 8000,
         socketTimeout: 10000,
