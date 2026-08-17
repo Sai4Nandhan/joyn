@@ -72,23 +72,26 @@ export async function sendEmailOtp(emailAddress, otpCode) {
     `,
   };
 
-  // Resolve IPv4 address for SMTP host to guarantee IPv4 connection on cloud hosts
+  // Resolve IPv4 addresses for SMTP host to guarantee IPv4 connection on cloud hosts
   let resolvedIps = [];
   try {
-    resolvedIps = await dns.promises.resolve4(smtpHost);
+    const res = await dns.promises.lookup(smtpHost, { family: 4, all: true });
+    resolvedIps = res.map((r) => r.address);
   } catch (dnsErr) {
-    console.warn(`[DNS RESOLVE WARNING] Could not resolve IPv4 for ${smtpHost}:`, dnsErr.message);
+    console.warn(`[DNS LOOKUP WARNING] Could not resolve IPv4 for ${smtpHost}:`, dnsErr.message);
   }
-  const ipv4Host = resolvedIps.length > 0 ? resolvedIps[0] : smtpHost;
 
-  const transportConfigs = [
-    // 1. Direct IPv4 address SMTPS (Port 465)
-    { host: ipv4Host, port: 465, secure: true, auth: { user: smtpUser, pass: smtpPass }, tls: { servername: smtpHost, rejectUnauthorized: false } },
-    // 2. Direct IPv4 address STARTTLS (Port 587)
-    { host: ipv4Host, port: 587, secure: false, requireTLS: true, auth: { user: smtpUser, pass: smtpPass }, tls: { servername: smtpHost, rejectUnauthorized: false } },
-    // 3. Domain host fallback with customLookup family 4
-    { host: smtpHost, port: 465, secure: true, lookup: customLookup, auth: { user: smtpUser, pass: smtpPass }, tls: { rejectUnauthorized: false } },
-  ];
+  // Known Gmail IPv4 SMTPS endpoints as fallbacks for cloud hosts like Render
+  const fallbackIps = ['142.250.115.108', '172.217.212.108', '74.125.130.108'];
+  const targetIps = Array.from(new Set([...resolvedIps, ...fallbackIps]));
+
+  const transportConfigs = targetIps.map((ip) => ({
+    host: ip,
+    port: 465,
+    secure: true,
+    auth: { user: smtpUser, pass: smtpPass },
+    tls: { servername: smtpHost, rejectUnauthorized: false },
+  }));
 
   let lastErr = null;
   for (const config of transportConfigs) {
