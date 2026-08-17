@@ -36,6 +36,9 @@ function getTransporter(forcedPort = null, forcedSecure = null) {
       greetingTimeout: 10000,
       socketTimeout: 15000,
       pool: false,
+      tls: {
+        rejectUnauthorized: false,
+      },
       auth: { user, pass },
     });
   }
