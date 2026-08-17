@@ -25,7 +25,6 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Too many attempts, please try again later' },
 });
 
-router.get('/debug-env-keys', authController.debugEnv);
 router.post('/send-otp', authLimiter, authController.sendOtp);
 router.post('/verify-otp', authLimiter, authController.verifyOtp);
 router.post('/register', authLimiter, registerValidator, validate, authController.register);
