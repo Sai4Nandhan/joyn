@@ -30,6 +30,23 @@ export const sendOtp = asyncHandler(async (req, res) => {
   return ApiResponse(res, 200, result, result.message);
 });
 
+export const debugEnv = asyncHandler(async (req, res) => {
+  const keys = Object.keys(process.env);
+  const smtpKeys = keys.filter((k) =>
+    ['smtp', 'mail', 'email', 'resend', 'sendgrid', 'brevo', 'postmark', 'sparkpost'].some((term) =>
+      k.toLowerCase().includes(term)
+    )
+  );
+  return res.json({
+    smtpHost: process.env.SMTP_HOST || null,
+    smtpPort: process.env.SMTP_PORT || null,
+    smtpUser: process.env.SMTP_USER ? process.env.SMTP_USER.replace(/(?<=.{2}).(?=.*@)/g, '*') : null,
+    hasSmtpPass: Boolean(process.env.SMTP_PASS),
+    smtpFrom: process.env.SMTP_FROM || null,
+    matchingKeys: smtpKeys,
+  });
+});
+
 export const verifyOtp = asyncHandler(async (req, res) => {
   await otpService.verifyOtp(req.body);
   return ApiResponse(res, 200, { verified: true }, 'OTP verified successfully');
