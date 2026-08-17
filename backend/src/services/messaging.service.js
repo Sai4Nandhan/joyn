@@ -1,22 +1,38 @@
 import nodemailer from 'nodemailer';
 import https from 'https';
+import dns from 'dns';
 import { ApiError } from '../utils/ApiError.js';
 import { env } from '../config/env.js';
 import { sendWhatsAppOtp } from './whatsapp.service.js';
 
+// Force Node.js to resolve IPv4 addresses first to prevent ENETUNREACH IPv6 failures on cloud hosts (e.g. Render)
+try {
+  if (typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+  }
+} catch (e) {
+  // Ignore
+}
+
 /**
  * Sends a real Email OTP verification code to the recipient's inbox via SMTP or Ethereal test inbox.
  */
-function getTransporter() {
+function getTransporter(forcedPort = null, forcedSecure = null) {
   const { host, port, user, pass } = env.smtp;
 
   if (host && user && pass) {
+    const effectivePort = Number(forcedPort || port) || 587;
+    const isSecure = forcedSecure !== null ? forcedSecure : effectivePort === 465;
+
     return nodemailer.createTransport({
       host,
-      port: Number(port) || 587,
-      secure: Number(port) === 465,
-      requireTLS: Number(port) !== 465,
+      port: effectivePort,
+      secure: isSecure,
+      requireTLS: !isSecure,
       family: 4,
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
       pool: false,
       auth: { user, pass },
     });
@@ -56,23 +72,23 @@ export async function sendEmailOtp(emailAddress, otpCode) {
   }
 
   if (transporter) {
-    try {
-      const mailOptions = {
-        from: smtpFrom,
-        to: emailAddress,
-        subject: `JOYN — Your 6-Digit Verification Code`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 16px;">
-            <h2 style="color: #7c3aed; margin-bottom: 10px;">JOYN Verification Code</h2>
-            <p style="color: #475569; font-size: 14px;">Your 6-digit verification code to complete your registration is:</p>
-            <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #0f172a; margin: 20px 0; border-radius: 8px;">
-              ${otpCode}
-            </div>
-            <p style="color: #64748b; font-size: 12px;">This code is valid for 10 minutes. If you did not request this code, please ignore this email.</p>
+    const mailOptions = {
+      from: smtpFrom,
+      to: emailAddress,
+      subject: `JOYN — Your 6-Digit Verification Code`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 16px;">
+          <h2 style="color: #7c3aed; margin-bottom: 10px;">JOYN Verification Code</h2>
+          <p style="color: #475569; font-size: 14px;">Your 6-digit verification code to complete your registration is:</p>
+          <div style="background-color: #f1f5f9; padding: 16px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #0f172a; margin: 20px 0; border-radius: 8px;">
+            ${otpCode}
           </div>
-        `,
-      };
+          <p style="color: #64748b; font-size: 12px;">This code is valid for 10 minutes. If you did not request this code, please ignore this email.</p>
+        </div>
+      `,
+    };
 
+    try {
       const info = await transporter.sendMail(mailOptions);
       console.log(`[EMAIL DISPATCH SUCCESS] Delivered OTP email to ${emailAddress} (MsgID: ${info.messageId})`);
 
@@ -89,6 +105,18 @@ export async function sendEmailOtp(emailAddress, otpCode) {
 
       return true;
     } catch (err) {
+      console.warn(`⚠️ [PRIMARY EMAIL DISPATCH FAILED] ${err.message}. Attempting SMTPS port 465 fallback...`);
+      // Try fallback SMTPS on port 465 if configured with credentials
+      const fallbackTransporter = getTransporter(465, true);
+      if (fallbackTransporter) {
+        try {
+          const fbInfo = await fallbackTransporter.sendMail(mailOptions);
+          console.log(`[EMAIL DISPATCH SUCCESS VIA FALLBACK 465] Delivered OTP email to ${emailAddress} (MsgID: ${fbInfo.messageId})`);
+          return true;
+        } catch (fbErr) {
+          console.error(`❌ [FALLBACK EMAIL DISPATCH ERROR]:`, fbErr.message);
+        }
+      }
       console.error(`❌ [EMAIL DISPATCH ERROR] Failed to deliver email to ${emailAddress}:`, err.message);
       throw new ApiError(500, `Email delivery failed: ${err.message}`);
     }
