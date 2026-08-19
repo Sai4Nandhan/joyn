@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useState } from 'react';
-import { api, setAccessToken, setRefreshPromise, setOnSessionExpired } from '../lib/axios.js';
+import { api, setAccessToken, refreshSession, setOnSessionExpired } from '../lib/axios.js';
 import * as authService from '../services/authService.js';
 
 export const AuthContext = createContext(null);
@@ -31,16 +31,9 @@ export function AuthProvider({ children }) {
 
     window.addEventListener('storage', handleStorageChange);
 
-    const localRefreshToken = localStorage.getItem('joyn_refresh_token');
-    const headers = localRefreshToken ? { 'x-refresh-token': localRefreshToken } : {};
-
-    const initPromise = api.post('/auth/refresh', { refreshToken: localRefreshToken }, { headers })
+    refreshSession()
       .then(({ data }) => {
-        setAccessToken(data.data.accessToken);
         setUser(data.data.user);
-        if (data.data.refreshToken) {
-          localStorage.setItem('joyn_refresh_token', data.data.refreshToken);
-        }
         sessionStorage.removeItem('joyn_just_registered');
         setIsJustRegistered(false);
         return data;
@@ -54,10 +47,7 @@ export function AuthProvider({ children }) {
       })
       .finally(() => {
         setIsLoading(false);
-        setRefreshPromise(null);
       });
-
-    setRefreshPromise(initPromise);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);

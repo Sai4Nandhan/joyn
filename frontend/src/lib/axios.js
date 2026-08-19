@@ -40,15 +40,34 @@ export function notifySessionExpired() {
   }
 }
 
+export async function refreshSession() {
+  if (!refreshPromise) {
+    const localRefreshToken = localStorage.getItem('joyn_refresh_token');
+    const headers = localRefreshToken ? { 'x-refresh-token': localRefreshToken } : {};
+    refreshPromise = api.post('/auth/refresh', { refreshToken: localRefreshToken }, { headers })
+      .then(({ data }) => {
+        setAccessToken(data.data.accessToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem('joyn_refresh_token', data.data.refreshToken);
+        }
+        return data;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
 api.interceptors.request.use(async (config) => {
   const isAuthRoute = config.url?.includes('/auth/');
 
-  // Auth routes (/auth/login, /auth/refresh, /auth/register, etc.) must NEVER await refreshPromise!
+  // Protected routes must await any pending session refresh before proceeding
   if (!isAuthRoute && !accessToken && refreshPromise) {
     try {
       await refreshPromise;
     } catch {
-      // Ignore error; protected route request will proceed or fail cleanly
+      // Ignore error; response interceptor handles unauthenticated state
     }
   }
 
@@ -72,18 +91,7 @@ api.interceptors.response.use(
         original._retry = true;
 
         try {
-          if (!refreshPromise) {
-            const localRefreshToken = localStorage.getItem('joyn_refresh_token');
-            const headers = localRefreshToken ? { 'x-refresh-token': localRefreshToken } : {};
-            refreshPromise = api.post('/auth/refresh', { refreshToken: localRefreshToken }, { headers }).finally(() => {
-              refreshPromise = null;
-            });
-          }
-          const { data } = await refreshPromise;
-          setAccessToken(data.data.accessToken);
-          if (data.data.refreshToken) {
-            localStorage.setItem('joyn_refresh_token', data.data.refreshToken);
-          }
+          const { data } = await refreshSession();
           original.headers.Authorization = `Bearer ${data.data.accessToken}`;
           return api(original);
         } catch (refreshErr) {
