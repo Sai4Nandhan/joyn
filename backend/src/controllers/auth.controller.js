@@ -43,24 +43,24 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 export const register = asyncHandler(async (req, res) => {
   const { user, accessToken, refreshToken } = await authService.register(req.body, meta(req));
   setRefreshCookie(res, refreshToken);
-  return ApiResponse(res, 201, { user: user.toSafeJSON(), accessToken }, 'Account created');
+  return ApiResponse(res, 201, { user: user.toSafeJSON(), accessToken, refreshToken }, 'Account created');
 });
 
 export const login = asyncHandler(async (req, res) => {
   const { user, accessToken, refreshToken } = await authService.login(req.body, meta(req));
   setRefreshCookie(res, refreshToken);
-  return ApiResponse(res, 200, { user: user.toSafeJSON(), accessToken }, 'Logged in');
+  return ApiResponse(res, 200, { user: user.toSafeJSON(), accessToken, refreshToken }, 'Logged in');
 });
 
 export const refresh = asyncHandler(async (req, res) => {
-  const oldToken = req.cookies?.[REFRESH_COOKIE];
+  const oldToken = req.cookies?.[REFRESH_COOKIE] || req.headers['x-refresh-token'] || req.body?.refreshToken;
   const { user, accessToken, refreshToken } = await authService.refresh(oldToken, meta(req));
   setRefreshCookie(res, refreshToken);
-  return ApiResponse(res, 200, { user: user.toSafeJSON(), accessToken }, 'Session refreshed');
+  return ApiResponse(res, 200, { user: user.toSafeJSON(), accessToken, refreshToken }, 'Session refreshed');
 });
 
 export const logout = asyncHandler(async (req, res) => {
-  const oldToken = req.cookies?.[REFRESH_COOKIE];
+  const oldToken = req.cookies?.[REFRESH_COOKIE] || req.headers['x-refresh-token'] || req.body?.refreshToken;
   await authService.logout(oldToken);
   res.clearCookie(REFRESH_COOKIE, getCookieOptions());
   return ApiResponse(res, 200, null, 'Logged out');

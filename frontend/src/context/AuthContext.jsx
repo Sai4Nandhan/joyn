@@ -31,16 +31,23 @@ export function AuthProvider({ children }) {
 
     window.addEventListener('storage', handleStorageChange);
 
-    const initPromise = api.post('/auth/refresh')
+    const localRefreshToken = localStorage.getItem('joyn_refresh_token');
+    const headers = localRefreshToken ? { 'x-refresh-token': localRefreshToken } : {};
+
+    const initPromise = api.post('/auth/refresh', { refreshToken: localRefreshToken }, { headers })
       .then(({ data }) => {
         setAccessToken(data.data.accessToken);
         setUser(data.data.user);
+        if (data.data.refreshToken) {
+          localStorage.setItem('joyn_refresh_token', data.data.refreshToken);
+        }
         sessionStorage.removeItem('joyn_just_registered');
         setIsJustRegistered(false);
         return data;
       })
       .catch(() => {
         setUser(null);
+        localStorage.removeItem('joyn_refresh_token');
         sessionStorage.removeItem('joyn_just_registered');
         setIsJustRegistered(false);
         return null;
@@ -58,25 +65,38 @@ export function AuthProvider({ children }) {
   }, [handleSessionExpired]);
 
   const login = useCallback(async (credentials) => {
-    const { user: loggedInUser, accessToken } = await authService.loginRequest(credentials);
+    const res = await authService.loginRequest(credentials);
+    const { user: loggedInUser, accessToken, refreshToken } = res;
     setAccessToken(accessToken);
     setUser(loggedInUser);
+    if (refreshToken) {
+      localStorage.setItem('joyn_refresh_token', refreshToken);
+    }
     sessionStorage.removeItem('joyn_just_registered');
     setIsJustRegistered(false);
     return loggedInUser;
   }, []);
 
   const register = useCallback(async (payload) => {
-    const { user: newUser, accessToken } = await authService.registerRequest(payload);
+    const res = await authService.registerRequest(payload);
+    const { user: newUser, accessToken, refreshToken } = res;
     setAccessToken(accessToken);
     setUser(newUser);
+    if (refreshToken) {
+      localStorage.setItem('joyn_refresh_token', refreshToken);
+    }
     sessionStorage.setItem('joyn_just_registered', 'true');
     setIsJustRegistered(true);
     return newUser;
   }, []);
 
   const logout = useCallback(async () => {
-    await authService.logoutRequest();
+    try {
+      await authService.logoutRequest();
+    } catch {
+      // Ignore network error on logout
+    }
+    localStorage.removeItem('joyn_refresh_token');
     setAccessToken(null);
     setUser(null);
     sessionStorage.removeItem('joyn_just_registered');

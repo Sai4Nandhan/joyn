@@ -73,16 +73,21 @@ api.interceptors.response.use(
 
         try {
           if (!refreshPromise) {
-            refreshPromise = api.post('/auth/refresh').finally(() => {
+            const localRefreshToken = localStorage.getItem('joyn_refresh_token');
+            const headers = localRefreshToken ? { 'x-refresh-token': localRefreshToken } : {};
+            refreshPromise = api.post('/auth/refresh', { refreshToken: localRefreshToken }, { headers }).finally(() => {
               refreshPromise = null;
             });
           }
           const { data } = await refreshPromise;
           setAccessToken(data.data.accessToken);
+          if (data.data.refreshToken) {
+            localStorage.setItem('joyn_refresh_token', data.data.refreshToken);
+          }
           original.headers.Authorization = `Bearer ${data.data.accessToken}`;
           return api(original);
         } catch (refreshErr) {
-          // Refresh failed (e.g. 401 session expired) — clear token and notify listener
+          localStorage.removeItem('joyn_refresh_token');
           notifySessionExpired();
         }
       } else if (isAuthRoute && original?.url?.includes('/auth/refresh')) {
