@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Send, Search, User, ShieldCheck, Smile } from 'lucide-react';
+import { Send, Search, User, ShieldCheck, Smile, ArrowLeft } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '../../components/layout/Layout.jsx';
 import { EmojiPicker } from '../../components/ui/EmojiPicker.jsx';
@@ -176,7 +176,7 @@ export default function Messages() {
     <Layout>
       <div className="flex h-[calc(100vh-7.5rem)] rounded-2xl border border-ink-100 bg-white shadow-card overflow-hidden">
         {/* Chat List Sidebar */}
-        <div className="w-80 border-r border-ink-100 flex flex-col bg-white">
+        <div className={`w-full md:w-80 border-r border-ink-100 flex flex-col bg-white ${selectedChatId ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-ink-100">
             <h2 className="text-lg font-bold text-ink-900 mb-3">Direct Messages</h2>
             <div className="relative">
@@ -232,14 +232,21 @@ export default function Messages() {
 
         {/* Active Chat Conversation Pane */}
         {activeChat ? (
-          <div className="flex-1 flex flex-col bg-ink-50/30">
+          <div className={`flex-1 flex flex-col bg-ink-50/30 ${selectedChatId ? 'flex' : 'hidden md:flex'}`}>
             {/* Header info */}
-            <div className="h-16 border-b border-ink-100 bg-white px-6 flex items-center justify-between">
+            <div className="h-16 border-b border-ink-100 bg-white px-4 sm:px-6 flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSelectedChatId(null)}
+                  className="md:hidden p-1.5 rounded-lg text-ink-500 hover:bg-ink-100 flex-shrink-0"
+                  aria-label="Back to conversations"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
                 <img
                   src={getImageUrl(activeChat.avatar, activeChat.name)}
                   alt={activeChat.name}
-                  className="h-10 w-10 rounded-full object-cover bg-ink-50"
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover bg-ink-50"
                 />
                 <div>
                   <h3 className="text-sm font-bold text-ink-900 flex items-center gap-1">

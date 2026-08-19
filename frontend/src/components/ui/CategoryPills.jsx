@@ -12,7 +12,7 @@ const pills = [
 
 export function CategoryPills({ selected = 'all', onChange }) {
   return (
-    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full max-w-full">
       {pills.map(({ key, label, Icon, isDropdown }) => {
         const isActive = selected === key;
 

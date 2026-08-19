@@ -18,6 +18,7 @@ import {
   Bookmark,
   Settings,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 
 const navItems = [
@@ -82,7 +83,7 @@ function TrustScoreWidget() {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ isMobileOpen, onClose }) {
   const { user } = useAuth();
   const { unreadCount, unreadDMsCount } = useContext(NotificationContext);
 
@@ -91,10 +92,10 @@ export function Sidebar() {
     displayNavItems.push({ to: '/admin', label: 'Admin Panel', icon: ShieldCheck });
   }
 
-  return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-sidebar flex-col border-r border-ink-200 bg-white px-4 py-6 shadow-sidebar dark:bg-[#0D1026] dark:border-purple-950/20 transition-colors duration-200">
+  const renderContent = (isMobile = false) => (
+    <>
       {/* Logo */}
-      <div className="mb-6 px-2">
+      <div className="mb-6 px-2 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <svg viewBox="0 0 100 100" className="h-8 w-8 flex-shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -108,13 +109,24 @@ export function Sidebar() {
             <path d="M50 48C50 48 24 48 24 64C24 80 44 86 50 86C56 86 76 80 76 64C76 48 50 48 50 48Z" fill="url(#joynSideGrad)" />
             <path d="M40 60C40 60 46 64 50 64C54 64 60 60 60 60" stroke="white" strokeWidth="6" strokeLinecap="round" />
           </svg>
-          <span className="font-display text-lg font-black tracking-wider text-slate-800 dark:text-white">
-            JOYN
-          </span>
+          <div>
+            <span className="font-display text-lg font-black tracking-wider text-slate-800 dark:text-white">
+              JOYN
+            </span>
+            <p className="text-2xs text-ink-400 dark:text-slate-500">
+              Find your people. Do more.
+            </p>
+          </div>
         </div>
-        <p className="mt-1 pl-[2.875rem] text-xs text-ink-400 dark:text-slate-500">
-          Find your people. Do more.
-        </p>
+        {isMobile && (
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-ink-400 hover:bg-ink-100 dark:hover:bg-purple-950/30"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -139,6 +151,7 @@ export function Sidebar() {
               key={to}
               to={to}
               end={to === '/'}
+              onClick={isMobile ? onClose : undefined}
               data-tour={getTourAttr(label)}
               className={({ isActive }) =>
                 `nav-item${isActive ? ' active' : ''}`
@@ -163,6 +176,30 @@ export function Sidebar() {
         </p>
         <TrustScoreWidget />
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop Fixed Sidebar */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-sidebar flex-col border-r border-ink-200 bg-white px-4 py-6 shadow-sidebar dark:bg-[#0D1026] dark:border-purple-950/20 transition-colors duration-200">
+        {renderContent(false)}
+      </aside>
+
+      {/* Mobile Slide-Over Drawer */}
+      {isMobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-ink-900/60 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+          />
+          {/* Drawer Content */}
+          <aside className="relative flex w-4/5 max-w-xs flex-1 flex-col border-r border-ink-200 bg-white px-4 py-6 shadow-2xl dark:bg-[#0D1026] dark:border-purple-950/20">
+            {renderContent(true)}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

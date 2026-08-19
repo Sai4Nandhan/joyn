@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Sidebar } from './Sidebar.jsx';
 import { Navbar } from './Navbar.jsx';
 import { OnboardingTour } from '../onboarding/OnboardingTour.jsx';
 
 export function Layout({ children, rightSidebar, clean }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   if (clean) {
     return (
       <div className="min-h-screen bg-white">
@@ -16,16 +19,19 @@ export function Layout({ children, rightSidebar, clean }) {
       {/* First-time User Onboarding Tour */}
       <OnboardingTour />
 
-      {/* Left Sidebar - Fixed */}
-      <Sidebar />
+      {/* Left Sidebar - Fixed on Desktop, Slide-Over Drawer on Mobile */}
+      <Sidebar
+        isMobileOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+      />
 
       {/* Top Navbar */}
-      <Navbar />
+      <Navbar onMenuClick={() => setIsMobileMenuOpen(true)} />
 
       {/* Main Content Area */}
-      <div className="ml-sidebar pt-16 flex">
+      <div className="lg:ml-sidebar pt-16 flex min-h-[calc(100vh-4rem)]">
         {/* Center Content */}
-        <main className="flex-1 min-w-0 px-6 py-6">
+        <main className="flex-1 min-w-0 px-3 py-4 sm:px-6 sm:py-6 w-full max-w-full overflow-x-hidden">
           {children}
         </main>
 
