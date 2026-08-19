@@ -41,12 +41,14 @@ export function notifySessionExpired() {
 }
 
 api.interceptors.request.use(async (config) => {
-  // If an initial or queued session refresh is currently in progress and we don't have an accessToken yet, await it first!
-  if (!accessToken && refreshPromise) {
+  const isAuthRoute = config.url?.includes('/auth/');
+
+  // Auth routes (/auth/login, /auth/refresh, /auth/register, etc.) must NEVER await refreshPromise!
+  if (!isAuthRoute && !accessToken && refreshPromise) {
     try {
       await refreshPromise;
     } catch {
-      // Ignore error here; response interceptor or catch block handles unauthenticated state
+      // Ignore error; protected route request will proceed or fail cleanly
     }
   }
 
