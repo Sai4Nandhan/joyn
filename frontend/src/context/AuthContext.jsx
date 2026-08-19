@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useState } from 'react';
-import { api, setAccessToken, setOnSessionExpired } from '../lib/axios.js';
+import { api, setAccessToken, setRefreshPromise, setOnSessionExpired } from '../lib/axios.js';
 import * as authService from '../services/authService.js';
 
 export const AuthContext = createContext(null);
@@ -31,22 +31,26 @@ export function AuthProvider({ children }) {
 
     window.addEventListener('storage', handleStorageChange);
 
-    (async () => {
-      try {
-        const { data } = await api.post('/auth/refresh');
+    const initPromise = api.post('/auth/refresh')
+      .then(({ data }) => {
         setAccessToken(data.data.accessToken);
         setUser(data.data.user);
-        // Clear registration flag on session restore / refresh
         sessionStorage.removeItem('joyn_just_registered');
         setIsJustRegistered(false);
-      } catch {
+        return data;
+      })
+      .catch((err) => {
         setUser(null);
         sessionStorage.removeItem('joyn_just_registered');
         setIsJustRegistered(false);
-      } finally {
+        throw err;
+      })
+      .finally(() => {
         setIsLoading(false);
-      }
-    })();
+        setRefreshPromise(null);
+      });
+
+    setRefreshPromise(initPromise);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);

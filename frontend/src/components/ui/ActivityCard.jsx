@@ -109,7 +109,7 @@ export function ActivityCard({ activity, onSaveToggle }) {
     <Link to={`/activities/${actId}`} className="group block">
       <div className="overflow-hidden rounded-2xl bg-white border border-ink-200/50 shadow-card transition-all duration-300 group-hover:shadow-lifted group-hover:-translate-y-1 dark:bg-[#0D1026] dark:border-purple-950/20">
         {/* Cover Image */}
-        <div className="relative h-44 overflow-hidden">
+        <div className="relative h-36 sm:h-44 overflow-hidden">
           {activity.coverImageUrl ? (
             <img
               src={activity.coverImageUrl}
@@ -121,23 +121,23 @@ export function ActivityCard({ activity, onSaveToggle }) {
           )}
 
           {/* Category Badge */}
-          <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold ${getCategoryBadgeClass(activity.category)}`}>
+          <span className={`absolute top-2.5 left-2.5 sm:top-3 sm:left-3 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-2xs sm:text-xs font-semibold ${getCategoryBadgeClass(activity.category)}`}>
             {categoryLabel(activity.category)}
           </span>
 
           {/* Bookmark */}
           <button
             onClick={handleBookmark}
-            className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-lg bg-white/80 backdrop-blur-sm text-ink-500 hover:bg-white hover:text-brand-500 transition-all"
+            className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-white/80 backdrop-blur-sm text-ink-500 hover:bg-white hover:text-brand-500 transition-all"
           >
-            <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-brand-500 text-brand-500' : ''}`} />
+            <Bookmark className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isSaved ? 'fill-brand-500 text-brand-500' : ''}`} />
           </button>
         </div>
 
         {/* Card Body */}
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
           {/* Title */}
-          <h3 className="font-semibold text-base text-ink-800 truncate dark:text-white">{activity.title}</h3>
+          <h3 className="font-semibold text-sm sm:text-base text-ink-800 truncate dark:text-white">{activity.title}</h3>
 
           {/* Date & Location */}
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-400 dark:text-slate-400">

@@ -160,17 +160,16 @@ export default function Home() {
   return (
     <Layout rightSidebar={rightSidebar}>
       {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#0D1026] px-4 py-5 sm:px-8 sm:py-8 mb-6 border border-purple-950/20 shadow-lifted">
+      <div className="relative overflow-hidden rounded-2xl bg-[#0D1026] px-3.5 py-4 sm:px-8 sm:py-8 mb-4 sm:mb-6 border border-purple-950/20 shadow-lifted">
         {/* Glow Effects */}
         <div className="absolute -right-10 -top-10 w-72 h-72 rounded-full bg-[#7c3aed]/20 blur-[80px] pointer-events-none" />
         <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-[#ea580c]/15 blur-[100px] pointer-events-none" />
-        <div className="absolute top-10 right-32 w-48 h-48 rounded-full bg-[#db2777]/10 blur-[60px] pointer-events-none" />
 
         <div className="relative z-10">
-          <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">
+          <h1 className="text-lg sm:text-2xl font-bold text-white mb-0.5 sm:mb-1">
             Find Your People. Do More Together.
           </h1>
-          <p className="text-xs sm:text-sm text-white/70 mb-4 sm:mb-5">
+          <p className="text-2xs sm:text-sm text-white/70 mb-3 sm:mb-5">
             Discover real-world activities with people you can trust.
           </p>
           <CategoryPills selected={category} onChange={setCategory} />
@@ -178,32 +177,32 @@ export default function Home() {
       </div>
 
       {/* Trust Signals Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-6 sm:mb-7">
-        <div className="flex items-center gap-2.5 rounded-xl bg-white border border-ink-100 px-3 py-2.5 shadow-sm dark:bg-[#0D1026] dark:border-purple-950/20">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-950/20">
-            <Shield className="h-4 w-4 text-brand-500" />
+      <div className="flex sm:grid sm:grid-cols-3 gap-2 overflow-x-auto no-scrollbar mb-4 sm:mb-7">
+        <div className="flex-1 min-w-[120px] flex items-center gap-2 rounded-xl bg-white border border-ink-100 px-2.5 py-2 shadow-sm dark:bg-[#0D1026] dark:border-purple-950/20">
+          <div className="flex h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-950/20">
+            <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-brand-500" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold text-ink-800 leading-none dark:text-white">Trust Scores</p>
-            <p className="text-[9px] text-ink-400 mt-0.5 leading-none">Every member rated</p>
+            <p className="text-[10px] font-extrabold text-ink-800 leading-none dark:text-white truncate">Trust Scores</p>
+            <p className="text-[8px] sm:text-[9px] text-ink-400 mt-0.5 leading-none truncate">Member rated</p>
           </div>
         </div>
-        <div className="flex items-center gap-2.5 rounded-xl bg-white border border-ink-100 px-3 py-2.5 shadow-sm dark:bg-[#0D1026] dark:border-purple-950/20">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+        <div className="flex-1 min-w-[120px] flex items-center gap-2 rounded-xl bg-white border border-ink-100 px-2.5 py-2 shadow-sm dark:bg-[#0D1026] dark:border-purple-950/20">
+          <div className="flex h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
+            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold text-ink-800 leading-none dark:text-white">ID Verified</p>
-            <p className="text-[9px] text-ink-400 mt-0.5 leading-none">Real identities only</p>
+            <p className="text-[10px] font-extrabold text-ink-800 leading-none dark:text-white truncate">ID Verified</p>
+            <p className="text-[8px] sm:text-[9px] text-ink-400 mt-0.5 leading-none truncate">Real identities</p>
           </div>
         </div>
-        <div className="flex items-center gap-2.5 rounded-xl bg-white border border-ink-100 px-3 py-2.5 shadow-sm dark:bg-[#0D1026] dark:border-purple-950/20">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/20">
-            <Star className="h-4 w-4 text-amber-500" />
+        <div className="flex-1 min-w-[120px] flex items-center gap-2 rounded-xl bg-white border border-ink-100 px-2.5 py-2 shadow-sm dark:bg-[#0D1026] dark:border-purple-950/20">
+          <div className="flex h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/20">
+            <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold text-ink-800 leading-none dark:text-white">Behaviour Ratings</p>
-            <p className="text-[9px] text-ink-400 mt-0.5 leading-none">Peer-reviewed reputation</p>
+            <p className="text-[10px] font-extrabold text-ink-800 leading-none dark:text-white truncate">Ratings</p>
+            <p className="text-[8px] sm:text-[9px] text-ink-400 mt-0.5 leading-none truncate">Peer reviewed</p>
           </div>
         </div>
       </div>

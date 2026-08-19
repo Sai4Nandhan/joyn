@@ -289,15 +289,7 @@ export async function refresh(oldRefreshToken, meta) {
     throw new ApiError(401, 'Session expired, please log in again');
   }
 
-  // Enforce maximum authenticated session lifetime (e.g. 30 minutes)
-  const maxSessionMs = (env.sessionMaxAgeMinutes || 30) * 60 * 1000;
   const sessionStartedAt = payload.sessionStartedAt || (stored.sessionStartedAt ? new Date(stored.sessionStartedAt).getTime() : null);
-
-  if (sessionStartedAt && (Date.now() - sessionStartedAt > maxSessionMs)) {
-    stored.revokedAt = new Date();
-    await stored.save();
-    throw new ApiError(401, 'Session expired, please log in again');
-  }
 
   const user = await User.findOne({ _id: payload.sub, isDeleted: { $ne: true } });
   if (!user) {

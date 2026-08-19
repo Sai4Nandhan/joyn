@@ -5,16 +5,19 @@ import * as authService from '../services/auth.service.js';
 
 const REFRESH_COOKIE = 'refreshToken';
 
-const cookieOptions = {
-  httpOnly: true,
-  secure: env.cookieSecure,
-  sameSite: 'lax',
-  path: '/api/auth',
-};
+function getCookieOptions() {
+  const isProd = env.nodeEnv === 'production' || Boolean(env.cookieSecure);
+  return {
+    httpOnly: true,
+    secure: isProd ? true : Boolean(env.cookieSecure),
+    sameSite: isProd ? 'none' : 'lax',
+    path: '/api/auth',
+  };
+}
 
 function setRefreshCookie(res, token) {
   res.cookie(REFRESH_COOKIE, token, {
-    ...cookieOptions,
+    ...getCookieOptions(),
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 }
@@ -59,7 +62,7 @@ export const refresh = asyncHandler(async (req, res) => {
 export const logout = asyncHandler(async (req, res) => {
   const oldToken = req.cookies?.[REFRESH_COOKIE];
   await authService.logout(oldToken);
-  res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+  res.clearCookie(REFRESH_COOKIE, getCookieOptions());
   return ApiResponse(res, 200, null, 'Logged out');
 });
 

@@ -141,7 +141,7 @@ export function ProfilePhotoGallery({ profile, onProfileUpdate }) {
       )}
 
       {/* Photos Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
+      <div className="flex sm:grid sm:grid-cols-3 md:grid-cols-5 gap-3 overflow-x-auto no-scrollbar pb-1">
         {photos.map((photo, idx) => {
           const isPrimary = photo.isPrimary || photo.url === primaryPhotoUrl;
           const isActing = actingPhotoId === photo.id;
@@ -151,7 +151,7 @@ export function ProfilePhotoGallery({ profile, onProfileUpdate }) {
               key={photo.id || idx}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className={`group relative aspect-square rounded-2xl overflow-hidden border-2 transition-all shadow-sm ${
+              className={`group relative aspect-square w-28 sm:w-auto flex-shrink-0 sm:flex-shrink rounded-2xl overflow-hidden border-2 transition-all shadow-sm ${
                 isPrimary
                   ? 'border-brand-500 ring-2 ring-brand-100 dark:ring-brand-900/40'
                   : 'border-ink-150 hover:border-brand-300 dark:border-slate-800'

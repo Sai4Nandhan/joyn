@@ -64,37 +64,37 @@ export default function Profile() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
 
           {/* Profile Header Card */}
-          <div className="rounded-2xl bg-white border border-ink-100 shadow-card overflow-hidden mb-6">
+          <div className="rounded-2xl bg-white border border-ink-100 shadow-card overflow-hidden mb-4 sm:mb-6">
             {/* Cover gradient */}
-            <div className="h-32 bg-gradient-to-r from-brand-500 via-brand-400 to-brand-300 relative">
-              <div className="absolute -bottom-10 left-6">
+            <div className="h-24 sm:h-32 bg-gradient-to-r from-brand-500 via-brand-400 to-brand-300 relative">
+              <div className="absolute -bottom-7 left-4 sm:-bottom-10 sm:left-6">
                 <div className="relative">
                   <img
                     src={avatarSrc}
                     alt={profile.name}
-                    className="h-20 w-20 rounded-2xl border-4 border-white object-cover shadow-lg"
+                    className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border-4 border-white object-cover shadow-lg"
                   />
                   {profile.isIdentityVerified && (
-                    <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent-green text-white shadow-sm" title="Identity Verified">
-                      <ShieldCheck className="h-3.5 w-3.5" />
+                    <div className="absolute -bottom-1 -right-1 flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-accent-green text-white shadow-sm" title="Identity Verified">
+                      <ShieldCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="px-6 pt-14 pb-6">
-              <div className="flex items-start justify-between">
+            <div className="px-4 pt-9 pb-4 sm:px-6 sm:pt-14 sm:pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div>
-                  <h1 className="text-xl font-bold text-ink-800 flex items-center gap-2">
+                  <h1 className="text-lg sm:text-xl font-bold text-ink-800 flex flex-wrap items-center gap-2">
                     {profile.name}
                     {profile.isIdentityVerified && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-3xs font-extrabold uppercase text-emerald-600 border border-emerald-200">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] sm:text-3xs font-extrabold uppercase text-emerald-600 border border-emerald-200">
                         <ShieldCheck className="h-3 w-3 text-emerald-500" /> Verified Identity
                       </span>
                     )}
                   </h1>
-                  <p className="text-sm text-ink-400 flex items-center gap-1.5 mt-0.5">
+                  <p className="text-xs sm:text-sm text-ink-400 flex items-center gap-1.5 mt-0.5">
                     <Calendar className="h-3.5 w-3.5" />
                     Member since {new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
                   </p>
@@ -102,14 +102,14 @@ export default function Profile() {
                 {!isEditing && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-1.5 rounded-lg border border-ink-200 px-4 py-2 text-sm font-medium text-ink-600 hover:bg-ink-50 transition-colors"
+                    className="self-start flex items-center gap-1.5 rounded-lg border border-ink-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-ink-600 hover:bg-ink-50 transition-colors"
                   >
                     <Edit3 className="h-3.5 w-3.5" /> Edit Profile
                   </button>
                 )}
               </div>
 
-              <p className="mt-4 text-sm text-ink-600 whitespace-pre-line">
+              <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-ink-600 whitespace-pre-line">
                 {profile.bio || 'No bio yet. Tell people about yourself!'}
               </p>
             </div>

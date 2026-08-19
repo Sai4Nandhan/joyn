@@ -21,6 +21,10 @@ export function getAccessToken() {
   return accessToken;
 }
 
+export function setRefreshPromise(promise) {
+  refreshPromise = promise;
+}
+
 export function setOnSessionExpired(cb) {
   onSessionExpiredCallback = cb;
 }
@@ -36,7 +40,16 @@ export function notifySessionExpired() {
   }
 }
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
+  // If an initial or queued session refresh is currently in progress and we don't have an accessToken yet, await it first!
+  if (!accessToken && refreshPromise) {
+    try {
+      await refreshPromise;
+    } catch {
+      // Ignore error here; response interceptor or catch block handles unauthenticated state
+    }
+  }
+
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
