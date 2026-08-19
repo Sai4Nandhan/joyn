@@ -12,6 +12,9 @@ import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
+// Trust reverse proxy header (X-Forwarded-Proto) for Render / Cloudflare deployment
+app.set('trust proxy', 1);
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: env.nodeEnv === 'development' ? 2000 : 600, // Reasonable threshold for API discovery & page loads
@@ -36,12 +39,26 @@ const authLimiter = rateLimit({
 
 import path from 'path';
 
+const allowedOrigins = [
+  'https://www.joynus.online',
+  'https://joynus.online',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  env.clientUrl,
+].filter(Boolean);
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes(origin.replace(/\/$/, ''))) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
   })
 );

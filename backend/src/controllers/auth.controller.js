@@ -11,7 +11,7 @@ function getCookieOptions() {
     httpOnly: true,
     secure: isProd ? true : Boolean(env.cookieSecure),
     sameSite: isProd ? 'none' : 'lax',
-    path: '/api/auth',
+    path: '/',
   };
 }
 
