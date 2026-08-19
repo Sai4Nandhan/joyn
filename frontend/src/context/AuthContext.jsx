@@ -39,11 +39,11 @@ export function AuthProvider({ children }) {
         setIsJustRegistered(false);
         return data;
       })
-      .catch((err) => {
+      .catch(() => {
         setUser(null);
         sessionStorage.removeItem('joyn_just_registered');
         setIsJustRegistered(false);
-        throw err;
+        return null;
       })
       .finally(() => {
         setIsLoading(false);
